@@ -3,9 +3,9 @@ pipeline {
 
     environment {
         IMAGE_NAME = "raina1994/portfolio"
-        IMAGE_TAG = "latest"
+        IMAGE_TAG = "${BUILD_NUMBER}"
         CONTAINER_NAME = "portfolio-container"
-        KUBECONFIG = '/var/lib/jenkins/.kube/config'
+        KUBECONFIG = "/var/lib/jenkins/.kube/config"
     }
 
     stages {
@@ -19,6 +19,7 @@ pipeline {
         stage('Image Build') {
             steps {
                 sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .'
+                sh 'docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest'
             }
         }
 
@@ -32,6 +33,8 @@ pipeline {
                     sh '''
                         echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin
                         docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${IMAGE_NAME}:latest
+                        docker logout
                     '''
                 }
             }
@@ -41,19 +44,17 @@ pipeline {
             steps {
                 echo '========== STAGE 4: Deploying to Kubernetes =========='
 
-                sh 'kubectl apply -f k8s/deployment.yaml'
-
-                sh 'kubectl apply -f k8s/service.yaml'
-
-                sh 'kubectl rollout restart deployment/portfolio'
-
-                sh 'kubectl rollout status deployment/portfolio --timeout=600s'
-
-                echo '---------- Deployment Status ----------'
-                sh 'kubectl get pods -l app=portfolio'
-                sh 'kubectl get services portfolio-service'
+                sh '''
+                    kubectl get nodes
+                    kubectl apply -f k8s/deployment.yaml
+                    kubectl apply -f k8s/service.yaml
+                    kubectl set image deployment/portfolio ${CONTAINER_NAME}=${IMAGE_NAME}:${IMAGE_TAG}
+                    kubectl rollout status deployment/portfolio --timeout=300s
+                    echo '---------- Deployment Status ----------'
+                    kubectl get pods -l app=portfolio
+                    kubectl get services portfolio-service
+                '''
             }
         }
     }
 }
-
