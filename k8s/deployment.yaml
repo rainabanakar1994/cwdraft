@@ -33,7 +33,7 @@ spec:
           imagePullPolicy: Always
 
           ports:
-            - containerPort: 8081
+            - containerPort: 8085
               protocol: TCP
 
           resources:
@@ -47,7 +47,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /
-              port: 8081
+              port: 8085
             initialDelaySeconds: 15
             periodSeconds: 20
             failureThreshold: 3
@@ -55,7 +55,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /
-              port: 8081
+              port: 8085
             initialDelaySeconds: 5
             periodSeconds: 10
 
