@@ -5,6 +5,7 @@ pipeline {
         IMAGE_NAME = "raina1994/portfolio"
         IMAGE_TAG = "latest"
         CONTAINER_NAME = "portfolio-container"
+        KUBECONFIG = '/var/lib/jenkins/.kube/config'
     }
 
     stages {
