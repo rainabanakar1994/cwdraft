@@ -47,7 +47,7 @@ pipeline {
 
                 sh 'kubectl rollout restart deployment/portfolio'
 
-                sh 'kubectl rollout status deployment/portfolio --timeout=120s'
+                sh 'kubectl rollout status deployment/portfolio --timeout=600s'
 
                 echo '---------- Deployment Status ----------'
                 sh 'kubectl get pods -l app=portfolio'
