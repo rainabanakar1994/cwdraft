@@ -2,29 +2,22 @@ pipeline {
     agent any
 
     environment {
-        GIT_REPO = ' https://github.com/rainabanakar1994/cwdraft.git'
-        BRANCH = 'main'
-
-        DOCKER_IMAGE = raina1994/portfolio
-        IMAGE_TAG = "${BUILD_NUMBER}"
-
-        KUBE_NAMESPACE = 'default'
-        DEPLOYMENT_NAME = ' portfolio'
-        CONTAINER_NAME = ' portfolio'
-        SERVICE_NAME = ' portfolio-service'
+        IMAGE_NAME = "raina1994/portfolio"
+        IMAGE_TAG = "latest"
+        CONTAINER_NAME = "portfolio-container"
     }
 
     stages {
+
         stage('Code Pull') {
             steps {
-                git branch: "${BRANCH}", url: "${GIT_REPO}"
+                checkout scm
             }
         }
 
         stage('Image Build') {
             steps {
-                sh 'docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} .'
-                sh 'docker tag ${DOCKER_IMAGE}:${IMAGE_TAG} ${DOCKER_IMAGE}:latest'
+                sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .'
             }
         }
 
@@ -36,10 +29,8 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
-                        docker push ${DOCKER_IMAGE}:latest
-                        docker logout
+                        echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin
+                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
                     '''
                 }
             }
@@ -47,30 +38,21 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh '''
-                    kubectl apply -f k8s/deployment.yaml
-                    kubectl apply -f k8s/service.yaml
+                echo '========== STAGE 4: Deploying to Kubernetes =========='
 
-                    kubectl set image deployment/${DEPLOYMENT_NAME} \
-                      ${CONTAINER_NAME}=${DOCKER_IMAGE}:${IMAGE_TAG} \
-                      -n ${KUBE_NAMESPACE}
+                sh 'kubectl apply -f k8s/deployment.yaml'
 
-                    kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${KUBE_NAMESPACE}
-                '''
+                sh 'kubectl apply -f k8s/service.yaml'
+
+                sh 'kubectl rollout restart deployment/portfolio'
+
+                sh 'kubectl rollout status deployment/portfolio --timeout=120s'
+
+                echo '---------- Deployment Status ----------'
+                sh 'kubectl get pods -l app=portfolio'
+                sh 'kubectl get services portfolio-service'
             }
         }
     }
-
-    post {
-        success {
-            echo 'Pipeline completed successfully.'
-            sh 'kubectl get pods'
-            sh 'kubectl get svc'
-        }
-        failure {
-            echo 'Pipeline failed.'
-        }
-    }
 }
-
 
