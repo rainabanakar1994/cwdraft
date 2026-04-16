@@ -2,43 +2,29 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'raina1994/portfolio'
-
-        DOCKER_TAG = "${BUILD_NUMBER}"
-
-        DOCKER_CREDENTIALS_ID = 'dockerhub-creds'
-
         GIT_REPO = ' https://github.com/rainabanakar1994/cwdraft.git'
+        BRANCH = 'main'
 
-        GIT_BRANCH = 'main'
-    }
+        DOCKER_IMAGE = raina1994/portfolio
+        IMAGE_TAG = "${BUILD_NUMBER}"
 
-    triggers {
-        pollSCM('H/5 * * * *')
+        KUBE_NAMESPACE = 'default'
+        DEPLOYMENT_NAME = ' portfolio'
+        CONTAINER_NAME = ' portfolio'
+        SERVICE_NAME = ' portfolio-service'
     }
 
     stages {
         stage('Code Pull') {
             steps {
-                echo '========== STAGE 1: Pulling source code from GitHub =========='
-
-                git branch: "${GIT_BRANCH}",
-                    url: "${GIT_REPO}",
-                    credentialsId: 'github-credentials'
-
-                echo "Successfully pulled code from branch: ${GIT_BRANCH}"
+                git branch: "${BRANCH}", url: "${GIT_REPO}"
             }
         }
 
         stage('Image Build') {
             steps {
-                echo '========== STAGE 2: Building Docker image =========='
-
-                script {
-                    dockerImage = docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}")
-
-                    echo "Docker image built successfully: ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                }
+                sh 'docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} .'
+                sh 'docker tag ${DOCKER_IMAGE}:${IMAGE_TAG} ${DOCKER_IMAGE}:latest'
             }
         }
 
@@ -50,46 +36,41 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh '''
-                        echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin
-                        docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
-                   '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
+                        docker push ${DOCKER_IMAGE}:latest
+                        docker logout
+                    '''
                 }
             }
         }
 
         stage('Deploy') {
             steps {
-                echo '========== STAGE 4: Deploying to Kubernetes =========='
+                sh '''
+                    kubectl apply -f k8s/deployment.yaml
+                    kubectl apply -f k8s/service.yaml
 
-                sh 'kubectl apply -f k8s/deployment.yaml'
+                    kubectl set image deployment/${DEPLOYMENT_NAME} \
+                      ${CONTAINER_NAME}=${DOCKER_IMAGE}:${IMAGE_TAG} \
+                      -n ${KUBE_NAMESPACE}
 
-                sh 'kubectl apply -f k8s/service.yaml'
-
-                sh 'kubectl rollout restart deployment/portfolio'
-
-                sh 'kubectl rollout status deployment/portfolio --timeout=120s'
-
-                echo '---------- Deployment Status ----------'
-                sh 'kubectl get pods -l app=portfolio'
-                sh 'kubectl get services portfolio-service'
+                    kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${KUBE_NAMESPACE}
+                '''
             }
         }
     }
 
     post {
         success {
-            echo '========== PIPELINE COMPLETED SUCCESSFULLY =========='
-            echo "Application deployed. Access at http://<EC2_PUBLIC_IP>:30081"
+            echo 'Pipeline completed successfully.'
+            sh 'kubectl get pods'
+            sh 'kubectl get svc'
         }
         failure {
-            echo '========== PIPELINE FAILED =========='
-            echo 'Check the stage logs above for error details.'
-        }
-        always {
-            sh "docker rmi ${DOCKER_IMAGE}:${DOCKER_TAG} || true"
-            sh "docker rmi ${DOCKER_IMAGE}:latest || true"
-            echo 'Workspace cleaned up.'
+            echo 'Pipeline failed.'
         }
     }
 }
+
 
