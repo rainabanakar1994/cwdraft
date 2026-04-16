@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "raina1994/portfolio"
+        IMAGE_NAME = "raina1994/myportfolio"
         IMAGE_TAG = "latest"
-        CONTAINER_NAME = "portfolio-container"
+        CONTAINER_NAME = "myportfolio-container"
         KUBECONFIG = '/var/lib/jenkins/.kube/config'
     }
 
@@ -47,11 +47,11 @@ pipeline {
 
                 
 
-                sh 'kubectl rollout status deployment/portfolio --timeout=600s'
+                sh 'kubectl rollout status deployment/myportfolio --timeout=600s'
 
                 echo '---------- Deployment Status ----------'
                 sh 'kubectl get pods -l app=portfolio'
-                sh 'kubectl get services portfolio-service'
+                sh 'kubectl get services myportfolio-service'
             }
         }
     }
