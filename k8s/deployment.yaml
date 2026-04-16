@@ -3,9 +3,9 @@ apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: portfolio
+  name: myportfolio
   labels:
-    app: portfolio
+    app: myportfolio
     environment: production
 
 spec:
@@ -14,7 +14,7 @@ spec:
 
   selector:
     matchLabels:
-      app: portfolio
+      app: myportfolio
 
   strategy:
     type: RollingUpdate
@@ -25,11 +25,11 @@ spec:
   template:
     metadata:
       labels:
-        app: portfolio
+        app: myportfolio
     spec:
       containers:
-        - name: portfolio
-          image: raina1994/portfolio:latest
+        - name: myportfolio
+          image: raina1994/myportfolio:latest
           imagePullPolicy: Always
 
           ports:
