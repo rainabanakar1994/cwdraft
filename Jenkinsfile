@@ -47,10 +47,10 @@ pipeline {
 
                 
 
-                sh 'kubectl rollout status deployment/myportfolio --timeout=600s'
+                sh 'kubectl rollout status deployment/myportfolio --timeout=300s'
 
                 echo '---------- Deployment Status ----------'
-                sh 'kubectl get pods -l app=portfolio'
+                sh 'kubectl get pods -l app=myportfolio'
                 sh 'kubectl get services myportfolio-service'
             }
         }
