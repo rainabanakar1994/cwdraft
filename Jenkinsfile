@@ -10,7 +10,7 @@ pipeline {
 
         GIT_REPO = ' https://github.com/rainabanakar1994/cwdraft.git'
 
-        GIT_BRANCH = 'develop'
+        GIT_BRANCH = 'main'
     }
 
     triggers {
