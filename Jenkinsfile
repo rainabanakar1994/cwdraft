@@ -44,15 +44,15 @@ pipeline {
 
         stage('Push Image') {
             steps {
-                echo '========== STAGE 3: Pushing image to Docker Hub =========='
-
-                script {
-                    docker.withRegistry('', "${DOCKER_CREDENTIALS_ID}") {
-                        dockerImage.push("${DOCKER_TAG}")
-                        dockerImage.push('latest')
-                    }
-
-                    echo "Image pushed to Docker Hub: ${DOCKER_IMAGE}:${DOCKER_TAG} and :latest"
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                        echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin
+                        docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                   '''
                 }
             }
         }
